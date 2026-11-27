@@ -1,0 +1,604 @@
+Autenticação é um dos assuntos mais importantes do desenvolvimento backend. E, quando você entende os conceitos por trás dela, começa a perceber que bibliotecas 
+como Passport, Passport JWT e JWT Simple são ferramentas que trabalham juntas para implementar um processo que você já consegue compreender.
+
+
+1. Primeiro: O que é Autenticação?
+
+Imagine que você desenvolveu uma API REST para gerenciar tarefas.
+Nessa API, os usuários podem:
+- criar tarefas.
+- consultar tarefas.
+- alterar tarefas.
+- excluir tarefas.
+
+Mas existe 2 usuários com quantidades de tarefas diferentes.
+- joão : 3 tarefas. 
+- maria : 5 tarefas.
+
+Quando João faz uma requisição, como a API vai saber que é ele? A autenticação resolve isso.
+
+### Autenticação é o processo de identificar a identidade de quem está fazendo a requisição. ###
+
+2. Autenticação x Autorização
+Esses dois conceitos são frequentemente utilizados juntos, mas possuem significados diferentes.
+Conceito	         Pergunta que responde
+- Autenticação	       Quem é você?
+- Autorização	       O que você pode fazer?
+
+Vamos imaginar uma situação:
+
+João realiza login na API utilizando seu e-mail e senha.
+
+A API verifica as credenciais e confirma que ele é realmente o João.
+
+Isso é autenticação.
+
+Agora João tenta excluir uma tarefa pertencente à Maria.
+
+A API precisa verificar se João possui permissão para excluir aquela tarefa.
+
+Isso é autorização.
+
+Portanto:
+- Autenticação identifica o usuário.
+- Autorização determina quais recursos esse usuário pode acessar.
+Uma observação importante: estar autenticado não significa necessariamente ter autorização para acessar todos os recursos da API.
+
+### EXTREMAMENTE IMPORTANTE VOCÊ ENTENDER ESSE FLUXO DE AUTENTICAÇÃO, SEM ELE VOCÊ NÃO VAI ENTENDER O ASSUNTO. ###
+3. Como funciona o processo de autenticação em uma API REST?
+
+3.1 - Cadastra Usuário.
+O usuário envia email e senha para cadastrar uma conta.
+
+3.2 - Armazena a senha.
+A senha passa por um processo de hash antes de ser armazenada. Neste projeto o processo funciona da seguinte maneira (senha + valor aleatório)
+
+3.3 - Login.
+O cliente envia suas credenciais para ser autenticado.
+
+3.4 - Verificação.
+A Api verifica se o usuário existe e compara a senha com o hash armazenado no banco de dados.
+
+3.5 - Geração do Token.
+Se as credenciais forem válidas, gera e entrega um token.
+
+3.6 - Requisições Autenticadas.
+Envia o token nas próximas requisições para acessar recursos protegido.
+
+
+4.Senhas e Hash: por que não armazenar a senha diretamente?
+
+Se João armazenasse essa senha:
+joao123
+
+Uma implementação insegura armazenaria essa senha diretamente no banco de dados.
+
+O problema é que, se uma pessoa conseguir acessar o banco, poderá visualizar as senhas dos usuários. Para evitar isso, utilizamos uma técnica chamada hashing. o 
+hashing transforma uma informação em uma sequência de caracteres, geralmente de tamnho fixo. Por exemplo:
+
+Senha original: joao123
+Algoritmo de hash(bcrypt) ---> processamento ---> resultado armazenado no banco de dados: $2b$10$X7...exemplo_de_hash...
+
+Uma característica do hash é que ele é projetado para ser uma operação de mão única. Não deve pensar nele como uma senha criptografada que depois será descriptografada.
+
+5.O que é JWT?
+
+É um padrão utilizado para transmitir informações entre partes através de um token. Na autenticação de APIs, podemos utilizá-lo para representar identidade de um usuário 
+que já passou pelo processo de autenticação. 
+Exemplo: 
+
+Ao invés de enviar seu email e senha em todas as requisiçãoes, a api entrega a você um token. Nas próximas requisições você envia esse token. A API verifica sua 
+assinatura e validade e determinar se ele pode ser aceito.
+
+Como é formado o JWT?
+
+- Header:
+Contém informações sobre o token e o algoritmo usado na assinatura.
+- Payload(carga):
+Contém as claims: declarações/dados sobre o usuário ou permissões.
+- Signature:
+Assinatura criptografada gerada pelo emissor para garantir a integridade e autenticidade do token.
+
+Observação: O conteúdo interno de um JWT é apenas codificado em Base64URL(não criptografado). Qualquer um que interceptá-lo consegue ler o texto, mas não consegue
+alterá-lo sem invalidar a assinatura. É muito utilizado como Access Token no OAuth 2.0 ou como ID Token no OpenID Connect
+
+
+Representação de um JWT completo:
+
+HEADER.PAYLOAD.SIGNATURE
+
+As três partes são separadas por pontos.
+
+6.O que é Secret ou Secret Key?
+
+Essa chave é utilizada pelo servidor para assinar o token. Quando o cliente apresenta o token novamente, o servidor utiliza a chave correspondente para verificar sua
+assinatura.
+
+Exemplo conceitual:
+const token = jwt.encode(
+    { id: user.id },
+    'minha-chave-secreta'
+);
+
+
+Nesse exemplo:
+- { id: user.id } representa os dados que serão colocados no Payload.
+- 'minha-chave-secreta' é a chave utilizada na assinatura.
+- jwt.encode() gera o token.
+Em uma aplicação real, a chave deve ficar em uma variável de ambiente, não diretamente no código.
+
+Atenção: a chave secreta não é o token. São coisas diferentes.
+
+7. O que é o Passport?
+
+É uma biblioteca que facilita a implementação de autenticação em aplicação node.js. Existe uma característica importante, ele trabalha com estratégias.
+### O que é uma estratégia? ###
+
+- Representa uma maneira de autenticar o usuário.
+EXEMPLO: 
+.Local Strategy: Autenticação com Usuário e Senha.
+.JWT Strategy: Autenticação com token.
+.Google OAuth 2.0: Autenticação com a conta do Google.
+.Facebook Strategy: Autenticação com a conta do facebook.
+
+Pense no passport com uma estrutura que permite implementar diferentes tipos de autenticação sem a necessidade de desenvolver toda a lógica do zero, apenas 
+configurá-la.
+
+
+8. O que é Passport JWT?
+É a estratégia que permite o Passport usar JWT para autenticar requisições.
+
+Biblioteca           	             Responsabilidade
+- Passport	              Gerencia o mecanismo de autenticação.
+- Passport JWT	          Implementa a estratégia de autenticação por JWT.
+- JWT Simple              Gera e decodifica os tokens.
+
+
+9. O que é um middleware na autenticação?
+Ele é uma função executada durante o processamento de uma requisição. Na autenticação, ele funciona como uma espécie de segurança na entrada de recurosos protegidos.
+Exemplo 1: uma rota que qualquer pessoa pode acessar.
+
+app.get('/tasks', (req, res) => {
+    res.json(tasks);
+});
+
+Exemplo 2: uma rota com um middleware de autenticação antes do controller.
+
+app.get('/tasks',
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
+        res.json(tasks);
+    }
+);
+
+O fluxo é:
+1. O cliente solicita /tasks.
+2. O middleware recebe a requisição.
+3. O Passport procura o token JWT.
+4. A estratégia verifica a assinatura e a validade do token.
+5. Se a autenticação for bem-sucedida, a execução continua.
+6. Caso contrário, a requisição é rejeitada.
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Para entender o que está escrito abaixo dessa linha é necessário que você fixe em sua mente o fluxo de autenticação:
+- Cadastra Usuário.
+O usuário envia email e senha para cadastrar uma conta.
+
+- Armazena a senha.
+A senha passa por um processo de hash antes de ser armazenada. Neste projeto o processo funciona da seguinte maneira (senha + valor aleatório)
+
+- Login.
+O cliente envia suas credenciais para ser autenticado.
+
+- Verificação.
+A Api verifica se o usuário existe e compara a senha com o hash armazenado no banco de dados.
+
+- Geração do Token.
+Se as credenciais forem válidas, gera e entrega um token.
+
+- Requisições Autenticadas.
+Envia o token nas próximas requisições para acessar recursos protegido.
+
+
+
+
+
+1. Inicialização da API
+Antes de receber qualquer requisição, o Node.js executa o index.js:
+const app = express();
+
+consign()
+    .include("libs/config.js")
+    .then("db.js")
+    .then("auth.js")
+    .then("libs/middlewares.js")
+    .then("routes")
+    .then("libs/boot.js")
+    .into(app);
+
+
+O Consign carrega os arquivos na sequência definida.
+
+Isso é importante porque cada arquivo depende de recursos carregados anteriormente.
+
+Por exemplo:
+- libs/config.js disponibiliza as configurações.
+- db.js disponibiliza a conexão e os modelos do Sequelize.
+- auth.js configura o Passport e sua estratégia JWT.
+- libs/middlewares.js inicializa o Passport no Express.
+- routes registra os endpoints.
+- libs/boot.js inicializa a aplicação.
+Observe especialmente esta sequência:
+.then("db.js")
+.then("auth.js")
+.then("libs/middlewares.js")
+
+
+O arquivo auth.js precisa ter acesso ao banco de dados e aos modelos. Já os middlewares precisam ter acesso ao objeto app.auth criado pelo auth.js.
+2. Primeiro momento: cliente realiza o login
+Imagine que um usuário cadastrado na sua API possui os seguintes dados:
+Campo	Valor
+id	15
+name	André
+email	andre@email.com
+password	senha123
+
+A senha armazenada no banco não deve ser senha123, mas seu hash gerado pelo bcrypt.
+
+O cliente realiza uma requisição:
+Requisição HTTP
+POST
+
+http://localhost:3000/token
+
+Body (JSON)
+{
+  "email": "andre@email.com",
+  "password": "senha123"
+}
+
+
+
+Por que /token?
+
+Porque essa é a rota criada no arquivo routes/token.js:
+app.post("/token", (req, res) => {
+
+
+Quando o Express recebe essa requisição, ele encontra essa rota e executa sua função.
+
+Primeiro, verifica se as duas propriedades existem:
+if (req.body.email && req.body.password) {
+
+
+O body-parser.json() que você configurou nos middlewares permite interpretar o JSON recebido e disponibilizá-lo em req.body.
+
+Depois:
+const email = req.body.email;
+const password = req.body.password;
+
+
+O servidor extrai as credenciais enviadas pelo cliente.
+
+Próximo passo: procurar o usuário no banco de dados.
+Users.findOne({
+    where: { email: email }
+})
+
+
+O Sequelize procura um registro na tabela Users cujo e-mail corresponda ao recebido.
+
+Supondo que encontre o usuário de ID 15, a execução continua:
+.then(users => {
+
+
+Agora temos acesso ao registro encontrado.
+3. Servidor verifica a senha
+O próximo trecho é:
+if (Users.isPassword(users.password, password)) {
+
+
+Aqui acontece uma parte muito importante da autenticação.
+
+O método isPassword() foi definido no modelo Users:
+isPassword: (encodedPassword, password) => {
+    return bcrypt.compareSync(password, encodedPassword);
+}
+
+
+Vamos separar os dois argumentos:
+- encodedPassword: hash da senha que está armazenado no banco.
+- password: senha original enviada pelo cliente.
+O bcrypt compara a senha original com o hash armazenado.
+
+Por exemplo:
+Cliente envia
+
+senha123
+
+Banco de dados contém
+
+"$2b$10$...hash..."
+
+bcrypt.compareSync()
+true
+Senha correspondente: autenticação aceita.
+
+false
+Senha incorreta: servidor responde HTTP 401.
+
+
+Uma observação importante: o bcrypt não descriptografa o hash. Ele verifica se a senha informada corresponde ao hash armazenado.
+4. Servidor gera o token JWT
+Se a senha estiver correta, o código executa:
+const payload = { id: users.id };
+
+
+Aqui temos o primeiro conceito importante do JWT: o payload.
+
+Payload é o conjunto de informações que será colocado dentro do token.
+
+No seu projeto, ele contém somente o ID do usuário:
+{
+    "id": 15
+}
+
+
+Por que somente o ID?
+
+Porque, posteriormente, o servidor utilizará esse identificador para consultar o banco e descobrir qual usuário está realizando a requisição.
+
+Agora vem a geração do token:
+res.json({
+    token: jwt.encode(payload, cfg.jwtSecret)
+});
+
+
+Vamos entender:
+- jwt.encode(): gera o token a partir do payload.
+- payload: contém o ID do usuário.
+- cfg.jwtSecret: chave secreta utilizada para assinar o token.
+O servidor responde ao cliente com algo semelhante a:
+{
+    "token": "eyJhbGciOiJIUzI1NiJ9..."
+}
+
+
+Esse token é enviado ao cliente.
+
+Importante: o JWT não criptografa automaticamente o conteúdo do payload. Em um JWT convencional assinado, as informações podem ser decodificadas por quem possuir o token. A assinatura garante a integridade, não o sigilo. Portanto, não coloque senhas ou informações secretas no payload.
+5. Segundo momento: cliente acessa uma rota protegida
+Agora imagine que o cliente deseja consultar suas tarefas.
+
+Ele já possui o token recebido no login.
+
+Então realiza:
+Requisição HTTP
+GET
+
+http://localhost:3000/tasks
+
+Header HTTP
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+
+
+O cliente envia o token no cabeçalho Authorization.
+Aqui acontece algo diferente do login.
+
+O cliente não precisa enviar novamente seu e-mail e sua senha.
+
+Ele apresenta o token que recebeu anteriormente.
+
+Mas como o servidor sabe que precisa verificar esse token?
+
+Vamos voltar ao arquivo routes/tasks.js:
+app.route("/tasks")
+    .all(app.auth.authenticate())
+
+
+Essa linha é fundamental.
+
+O método .all() determina que o middleware informado será executado para todas as requisições HTTP que utilizarem essa rota.
+
+E o que faz app.auth.authenticate()?
+
+Vamos voltar ao auth.js:
+authenticate: () => {
+    return passport.authenticate("jwt", cfg.jwtSession);
+}
+
+
+Aqui temos duas partes importantes:
+
+1. passport.authenticate("jwt")
+
+Informa ao Passport que ele deve utilizar a estratégia chamada jwt para autenticar a requisição.
+
+2. cfg.jwtSession
+
+Contém:
+jwtSession: {
+    session: false
+}
+
+
+Isso informa que a autenticação não utilizará uma sessão persistente do Passport.
+
+Ou seja, cada requisição protegida deverá apresentar seu próprio token.
+6. Como o Passport verifica o token?
+Agora chegamos ao arquivo auth.js, onde a estratégia foi configurada:
+const strategy = new Strategy(
+    { secretOrKey: cfg.jwtSecret },
+    (payload, done) => {
+        Users.findById(payload.id)
+            .then(user => {
+                if (user) {
+                    return done(null, {
+                        id: user.id,
+                        email: user.email
+                    });
+                }
+
+                return done(null, false);
+            })
+            .catch(error => done(error, null));
+    }
+);
+
+
+Vamos imaginar o que acontece quando o Passport recebe a requisição.
+
+Primeiro: a estratégia JWT precisa extrair o token do cabeçalho HTTP.
+
+Segundo: verifica a assinatura do token utilizando secretOrKey, que contém a mesma chave secreta utilizada na geração.
+
+Terceiro: se o token for válido, seu payload é disponibilizado na variável payload.
+
+No nosso exemplo:
+payload = {
+    id: 15
+};
+
+
+Quarto: o Passport executa:
+Users.findById(payload.id)
+
+
+Ou seja, utiliza o ID 15 para procurar o usuário no banco de dados.
+
+Por que consultar novamente o banco se o token já possui o ID?
+
+Porque a existência de um token válido não significa necessariamente que o usuário ainda existe no banco.
+
+Por exemplo, a conta pode ter sido excluída depois da emissão do token.
+
+Quinto: se encontrar o usuário, executa:
+return done(null, {
+    id: user.id,
+    email: user.email
+});
+
+
+Esse done() informa ao Passport que a autenticação foi bem-sucedida e fornece os dados do usuário autenticado.
+
+O Passport disponibiliza esse objeto em:
+req.user
+
+
+Portanto, depois da autenticação, temos:
+req.user = {
+    id: 15,
+    email: "andre@email.com"
+};
+
+
+Se não encontrar o usuário, done(null, false) indica falha na autenticação.
+
+Se ocorrer um erro na consulta, done(error, null) informa uma falha de execução.
+7. O que acontece depois da autenticação?
+Agora que o Passport autenticou o usuário, a execução continua na rota /tasks.
+
+Veja o código:
+.get((req, res) => {
+    Tasks.findAll({
+        where: {
+            user_id: req.user.id
+        }
+    })
+    .then(result => res.json(result));
+})
+
+
+Observe:
+req.user.id
+
+
+Lembra que o Passport disponibilizou o usuário autenticado em req.user?
+
+É exatamente esse objeto que será utilizado para identificar o proprietário das tarefas.
+
+Suponha que a tabela Tasks contenha:
+id	title	user_id
+1	Estudar JavaScript	15
+2	Estudar Node.js	15
+3	Estudar Python	20
+4	Estudar SQL	20
+
+O usuário de ID 15 faz uma requisição GET para /tasks.
+
+O Sequelize executará uma consulta equivalente a:
+SELECT *
+FROM Tasks
+WHERE user_id = 15;
+
+
+Assim, o usuário receberá somente suas tarefas.
+
+O mesmo princípio é aplicado nas outras operações:
+- GET /tasks/:id: consulta uma tarefa pertencente ao usuário.
+- POST /tasks: associa a nova tarefa ao usuário autenticado.
+- PUT /tasks/:id: atualiza somente uma tarefa pertencente ao usuário.
+- DELETE /tasks/:id: exclui somente uma tarefa pertencente ao usuário.
+Veja, por exemplo, o POST:
+req.body.user_id = req.user.id;
+Tasks.create(req.body);
+
+
+O servidor define o proprietário da tarefa utilizando o usuário autenticado, em vez de confiar no ID enviado pelo cliente.
+
+Isso é fundamental para evitar que alguém crie tarefas em nome de outro usuário.
+
+8. Visualizando todo o fluxo
+Agora vamos juntar tudo o que estudamos.
+Fluxo de autenticação JWT
+1. Cliente
+
+Envia e-mail e senha para POST /token
+
+
+2. Servidor
+
+Users.findOne() procura o usuário no banco
+
+
+3. Bcrypt
+
+Compara a senha recebida com o hash armazenado
+
+
+Credenciais válidas
+4. JWT Simple
+
+Gera o token com o payload { id: 15 }
+
+
+5. Cliente
+
+Recebe e armazena o token
+
+
+6. Cliente
+
+Solicita GET /tasks enviando Authorization: Bearer token
+
+
+7. Passport-JWT
+
+Extrai e valida o token utilizando a chave secreta
+
+
+8. Estratégia JWT
+
+Consulta o usuário no banco utilizando payload.id
+
+
+Autenticação aprovada
+9. Passport
+
+Disponibiliza o usuário em req.user
+
+
+10. Rota /tasks
+
+Consulta somente as tarefas do usuário autenticado

@@ -1,0 +1,314 @@
+### Instalando Passport e JWT na api ###
+
+Será usado os seguintes módulos:
+- Passport: como mecanismo de autenticação
+- Passport JWT: extensão do JWT para uso como estratégia de autenticação no Passport
+- JWT Simple: Biblioteca para encodificação/decodificação de tokens do JWT
+
+Sobre o JWT 
+O JWT (JSON Web Tokens) é uma estratégia bem simples e segura para 
+autenticação de APIs RESTful. Ela é um open standard para autenticações de 
+aplicações web baseado no tráfego de tokens em formato JSON, entre o cliente 
+e servidor. Seu fluxo de autenticação funciona da seguinte maneira: 
+1) Cliente realiza uma requisição uma única vez, enviando suas credenciais 
+2) Servidor valida as credenciais e, se tudo estiver certo, ele retorna para o 
+cliente um JSON com token que encodifica os dados de um usuário logado 
+no sistema; 
+3) Cliente, ao receber esse token, pode armazená-lo da maneira que quiser, 
+seja via LocalStorage, Cookie ou outros mecanismos de armazenamento 
+client-side; 
+4) Toda vez que o cliente acessar uma rota que necessita autenticação, ele terá 
+de apenas enviar esse token para a API autenticar e liberar o consumo de 
+dados; 
+5) Servidor sempre validará esse token para permitir ou não uma requisição 
+de cliente. 
+
+
+Instale:
+
+npm install passport passport-jwt jwt-simple --save
+
+### arquivo libs/config.js ###
+
+module.exports={
+    database: "ntask",
+    username: "",
+    password: "",
+    params: {
+        dialect: "sqlite",
+        storage: "ntask.sqlite",
+        define: {
+            underscored: true
+        }
+    },
+    jwtSecret:"Ntask-AP1", 
+    jwtSession:{session:false}
+};
+
+O campo jwtSecret mantém uma string de chave secreta que servirá como base para encode/decode de tokens. É reconhecível que essa string seja complexa, utilizando
+diversos caracteres diferentes.
+Jamais compartilhe essa chave secreta em público, pois, se ela vazar, você deixará sua aplicação vunerável a invasão, permitindo que uma pessoa má intecionada acesse
+o sistema e gere tokens autenticáveis, sem gerar as credenciais de login e senha no sistema.
+Para finalizar, o último campo incluído é o jwtSession, que possui o objeto {session: false}. Esse item será utilizado para informar ao Passport que a autenticação 
+não terá sessão de usuário. 
+
+### pasta raiz o arquivo auth.js ###
+
+import passport from "passport";
+import {Strategy} from "passport-jwt";
+
+module.exports=app=>{
+    const Users=app.db.model.Users;
+    const cfg=app.libs.config;                               
+    const strategy=new Strategy({secretOrKey:cfg.jwtSecret}, 
+        (payload, done)=>{
+            Users.findById(payload.id) 
+            .then(user=>{
+                if(user){
+                    return done(null,{  
+                        id:user.id,
+                        email:user.email
+                    });
+                }
+                return done(null, false); 
+            })
+            .catch(error=>done(error, null));
+        }
+    );
+    passport.use(strategy);  
+    return{
+        initialize:()=>{
+            return passport.initialize(); 
+        },
+        authenticate:()=>{
+            return passport.authenticate("jwt",cfg.jwtSession);
+        }
+    };
+};
+
+
+### para carregar o auth no início da aplicação, edite o código index.js ###
+
+import express from "express";
+import consign from "consign";
+
+const app = express();
+
+consign()
+.include("libs/config.js")
+.then("db.js")
+.then("auth.js")
+.then("libs/middlewares.js")
+.then("routes")
+.then("libs/boot.js")
+.into(app);
+
+
+### edite o arquivo libs/middlewares ###
+
+import bodyParser from "body-parser";
+
+module.exports = app => {
+    app.set("port", 3000);
+    app.set("json spaces", 4);
+    app.use(bodyParser.json()); 
+    app.use(app.auth.initialize()); 
+    app.use((req, res, next) => {
+        if (req.body) {
+            delete req.body.id;
+        }
+        next();
+    });
+};
+
+### Gerando Tokens para usuários autenticados ###
+
+Para finalizar a implementação de autenticação JWT na aplicação, será necessário:
+1 - Preparar o modelo Users para a criptografia de senha de usuário. 
+2 - Também será criado uma rota para gerar tokens para usuários que se autenticarem com o login e senha no sistema.
+3 - Refatoração nas rotas de tarefas e usuários para que as consultas usem corretamente o id de usuário autenticado.
+
+A criptografia de senha de usuários será realizado pelo módulo bcrypt. Instale o módulo:
+
+npm install bcrypt --save
+
+### models/users.js ###
+module.exports = (sequelize, DataType) => {
+
+    const Users = sequelize.define("Users", {
+        id: {
+            type: DataType.INTEGER,
+            primaryKey: true,
+            autoIncrement: true
+        },
+        name: {
+            type: DataType.STRING,
+            allowNull: false,
+            validate: {
+                notEmpty: true
+            }
+        },
+        email: {
+            type: DataType.STRING,
+            unique: true, 
+            allowNull: false,
+            validate: {
+                notEmpty: true
+            }
+        }
+    }, { 
+        hooks:{ 
+            beforeCreate: user=>{
+                const salt=bcrypt.genSaltSync(); 
+                user.password=bcrypt.hashSync(user.password,salt); 
+            }
+        },
+        classMethods: {
+            associate: (models) => { 
+                Users.hasMany(models.Tasks); 
+            }
+        },
+        isPassword:(encodedPassword, password) =>{ 
+            return bcrypt.compareSync(password, encodedPassword); 
+        }
+    });
+
+    return Users;
+};
+
+
+
+### crie o arquivo routes/token: ###
+
+import jwt from "jwt-simple";
+
+module.exports=app=>{
+    const cfg=app.libs.config;
+    const Users=app.db.models.Users;
+    app.post("/token", (req, res)=>{
+        if(req.body.email && req.body.password) {
+            const email=req.body.email;
+            const password=req.body.password;
+            Users.findOne({where:{email:email}}) 
+            .then(users=>{
+                if(Users.isPassword(users.password, password)){
+                    const payload={id:users.id};
+                    res.json({
+                        token: jwt.encode(payload, cfg.jwtSecret) 
+                    });
+                } else{
+                    res.sendStatus(401); 
+                }
+            })
+            .catch(error=>res.sendStatus(401)); 
+        }else{
+            res.sendStatus(401);
+        }
+    });
+}
+
+
+### edite o arquivo routes/tasks.js ###
+
+module.exports=app=>{
+    const Tasks=app.db.models.Tasks;
+    app.route("/tasks")
+        .all(app.auth.authenticate())
+        .get((req,res)=>{
+            Tasks.findAll({
+                where:{user_id:req.user.id}
+            })
+            .then(result => res.json(result))
+            .catch(error=>{
+                res.status(412).json({msg:error.message});
+            });
+        })
+        .post((req,res)=>{
+            req.body.user_id=req.user.id;
+            Tasks.create(req.body)
+            .then(result => res.json(result))
+            .catch(error=>{
+                res.status(412).json({msg:error.message});
+            });
+        });
+    
+    app.route("/tasks/:id")
+        .all(app.auth.authenticate())
+        .get((req,res)=>{
+            Tasks.findOne({where:{
+                id:req.params.id,
+                user_id:req.user.id
+            }})
+            .then(result =>{
+              if(result){
+                return res.json(result);
+              }else{
+                return res.sendStatus(404);
+              }
+            })
+            .catch(error=>{
+                res.status(412).json({msg: error.message});
+            });
+        })
+        .put((req,res)=>{
+            Tasks.update(req.body, {where: {
+                id: req.params.id,
+                user_id: req.user.id
+            }})
+            .then(result => res.sendStatus(204))
+            .catch(error=>{
+                res.status(412).json({msg:error.message});
+            });
+        })
+        .delete((req,res)=>{
+            Tasks.destroy({where: {
+                id: req.params.id,
+                user_id: req.user.id
+            }})
+            .then(result => res.sendStatus(204))
+            .catch(error=>{
+                res.status(412).json({msg:error.message});
+            });
+        });
+};
+
+
+### edite o arquivo routes/users.js ###
+
+module.exports=app=>{
+    const Users=app.db.models.Users;
+
+    app.route("/user")
+    .all(app.auth.authenticate())
+    .get((req, res)=>{
+        Users.findById(req.user.id,{
+            attributes: ["id", "name", "email"]
+        })
+        .then(result => res.json(result))
+        .catch(error=>{
+            res.status(412).json({msg: error.message});
+        });
+    })
+
+    delete((req, res)=>{
+        Users.destroy({where: {id: req.user.id}})
+        .then(result => res.sendStatus(204))
+        .catch(error=>{
+            res.status(412).json({msg: error.message});
+        });
+    });
+
+    app.post("/users",(req, res)=>{
+        Users.create(req.body)
+        .then(result => res.json(result))
+        .catch(error=>{
+            res.status(412).json({msg: error.message});
+        });
+    });
+
+};
+
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,186 @@
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                              GERENCIANDO MÓDULOS COM NPM
+1 - O que é um package.json?
+
+O package.json é um descritor de módulos, ele possui informações do seu projeto node.js dentro de um objeto escrito no formato JSON. 
+EXEMPLO:
+
+{
+  "name": "meu-projeto",
+  "version": "1.0.0",
+  "description": "Projeto de estudos Node.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.0.0"
+  }
+}
+
+OBS: esses valores escritos no objeto JSON acima são ilustrativas.
+
+2 - O que cada propriedade significa?
+
+.Propriedade/Função.
+
+# name: Nome do pacote ou projeto.
+# version: Versão atual do projeto.
+# description: Descrição do projeto.
+# main: Ponto de entrada declarado para outro pacote, especialmente quando ele é importado por outros objetos
+# scripts: Define comando que podem ser executados pelo npm.
+# dependencies: Lista as bibliotecas necessárias para a aplicação funcionar.
+
+EXEMPLO:
+"scripts":{
+    "start":"node index.js"
+}
+
+Ele permite executar o arquivo index.js com o comando: npm start
+Ou seja, em vez de digitar node index.js, você pode utilizar um comando definido no própio package.json.
+
+EXEMPLO 2:
+"dependencies": {
+    "mysql2": "^3.0.0"
+}
+
+Isso declara que o projeto depende da biblioteca mysql2. O npm utiliza essas informações para instalar e gerênciar as dependências.
+Atenção: declarar uma dependência no package.json não significa, por si só, que a biblioteca já esteja instalada. A instalação é gerenciada pelo npm, geralmente
+com npm install.
+
+3 - Como ele se relaciona com os módulos do Node.js?
+
+EXEMPLO: você tem essa estrutura.
+
+meu-projeto/
+
+<>index.js / Arquivo principal
+
+<>db.js / Conexão com o banco
+
+<>package.json / Metadados e configurações
+
+#node_modules/ Bibliotecas instaladas
+
+.No arquivo index.js você poderia escrever:
+
+const mysql = require('mysql2/promise');
+
+Nesse caso, o Node.js procura e carrega o módulo mysql2/promise, disponibilizado pelo pacote mysql2.
+O package.json ajuda a descrever o projeto e declarar suas dependências, mas não é ele que contém o código do módulo nem que executa a importação. Quem realiza a
+resolução e o carregamento é o sistema de módulos do Node.js.
+
+Também é importante distinguir:
+- Módulo: uma unidade de código que pode ser carregada ou reutilizada.
+- Pacote: uma unidade distribuível, normalmente com um package.json, que pode conter um ou vários módulos.
+- package.json: o arquivo que descreve o pacote e suas configurações.
+
+4 - Como o package.json é criado?
+
+Quando você executa 'npm init -y', o npm cria um package.json com valores padrão para o projeto atual. Quando instalar uma biblioteca nova, o npm registra essa
+em dependencies e instala os arquivos necessários.
+
+Há ainda outros arquivos importantes:
+- package-lock.json: registra a árvore de dependências e as versões resolvidas para ajudar a reproduzir a instalação.
+- node_modules/: diretório onde as dependências instaladas ficam disponíveis.
+
+.CommonJS (CJS): utiliza require() para importar módulos e module.exports ou exports para exportar valores.
+.ES Modules (ESM): utiliza import para importar e export para exportar valores.
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Parte do livro:
+
+{
+  "name": "meu-primeiro-node-app",
+  "description": "Meu primeiro app Node.js",
+  "author": "User <user@email.com>"
+  "version": "1.2.3",
+  "private": true,
+  "dependencies": {
+    "modulo-1": "1.0.0"
+    "modulo-2": "1.0.0",
+    "modulo-3": ">-1.0.0",
+  },
+  "devDependencies":{
+    "modulo-4": "*"
+  }
+}
+
+Os módulos do Node.js trabalham com 3 níveis de versionamento. Por exemplo a versão 1.2.3 está dividida nos níveis.
+1) Major
+2) Minor
+3) Patch
+
+- Módulo 1:
+ Nesse módulo será instalado apenas a versão fixa. Use esse tipo versão para instalar dependências cujas atualizações possam quebrar o projeto pelo simples fato de
+ que certas formalidades foram removidas e ainda as utilizamos na aplicação.
+- Módulo 2:
+ O segundo módulo já possui uma certa flexibilidade de atualização. Ele usa o caractere ~. Que permite atuaizar um módulo no nível de patch(1.0.x). Geralmente, essas
+ atualizações são seguras, trazendo apenas melhorias ou correções de bugs.
+- Módulo 3:
+ O módulo 3 atualiza versões que são maior ou igual a 1.0.0 em todos os níveis de versão. Em muitos casos, usar >= pode ser perigoso, porque a dependência pode ser
+ atualizada em nível major ou minor e, consequentemente, pode conter grandes modificações que podem quebrar a sua aplicação. Isso vai exigir que você atualize a 
+ aplicação ou que você use a versão anterior.
+- Módulo 4:
+ Este sempre pega a última versão do módulo em qualquer nível. Ele também pode causar problemas nas atualizações e possui os mesmo problemas de versionamento que
+ o módulo 3. Geralmente, ele é usado no devDependencies, que são dependências focadas para uso de ambiente em desenvolvimento e teste, em que as atualizações nesse
+ tipo de ambiente não prejudica o comportamento da aplicação que já está em ambiente de produção.
+
+. AUTOMATIZANDO TAREFAS COM NPM.
+Você criar comando executáveis por meio do "npm run" nome_do_comando. Para declarar esses novos comandos, basta declará-los dentro do atriuto script no package.json.
+
+{
+  "name": "meu-primeiro-node-app",
+  "description": "Meu primeiro app Node.js",
+  "author": "User <user@email.com>"
+  "version": "1.2.3",
+  "private": true,
+  "scripts":{
+    "start": "node app.js",
+    "clean": "rm -rf node_modules",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "modulo-1": "1.0.0"
+    "modulo-2": "1.0.0",
+    "modulo-3": ">-1.0.0",
+  },
+  "devDependencies":{
+    "modulo-4": "*"
+  }
+}
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CAPÍTULO 4: CONSTRUINDO UMA API
+.Introdução ao Express:
+
+Seu foco é trabalhar com perfeição manipulando views, routers e controllers, ficando a sua escolha trabalhar com models e usar qualquer framework de persistência 
+sem gerar nenhum conflito ou incompatibilidade com Express. Isso é uma vantagem, pois existem muitos módulos do tipo ODM(Oject Data Mapper) e também ORM(Object Rela
+tional Maping) disponíveis para node.js. Você pode usar qualquer um junto com o Express sem a necessidade de configurar alguma integração entre ambos, só precisará
+carregar os módulos de persistência dentro dos controllers ou router de sua aplicação.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Dúvidas:
+o que é views, controllers, routers, "trabalhar com models", framework de persistência, módulos do tipo ODM E ORM?
+
+View:
+- Apresenta informações ao usuário, geralmente em HTML.
+Router:
+- Associa métodos HTTP e caminhos às funções responsáveis por atendê-los.
+Controllers:
+- Processa a requisição e coordena a resposta.
+Model:
+- Representa os dados e pode disponibilizar operações para manipulá-los.
+Persistência:
+- Armazenamento duradouro de dados.
+Framework / biblioteca de persistência:
+- Facilita o acesso e a manipulação dos dados armazenados.
+ORM:
+- Faz o mapeamento entro objetos e estruturas relacionais, como tabelas SQL.
+ODM:
+- Faz o mapeamento entre objetos e documentos
+Express:
+- Organiza o atendimento das requisições http sem obrigar o uso de uma tecnologia específica de banco de dados.
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------

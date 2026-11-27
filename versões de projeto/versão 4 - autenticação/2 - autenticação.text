@@ -1,0 +1,373 @@
+O que você pode me dizer sobre o principais conceitos e implementações de autenticação de usuários na api?
+O que você pode me dizer sobre o framework Passport?
+E sobre as estratégias de autenticação: Basic & Digest, OpenID, OAuth, OAuth 2.0 e JWT?
+O que é tokens em formato JSON?
+O que é open standard para autenticações de aplicações web baseado no tráfego de tokens em formato JSON, entre o cliente e servidor?
+
+### 1 - Autenticação e autorização: conceitos fundamentais. ###
+
+.Autenticação(Authentication): é o processo de verificar a identidade de alguém.
+Exemplo:
+
+O usuário envia:
+
+{
+    "email": "andre@email.com",
+    "password": "123456"
+}
+
+A api verifica se as credenciais correspondem a um usuário cadastrado.
+
+A pergunta que autenticação faz é "Quem é você?"
+
+.Autorização(Authorization): É o processo de verificar quais recursos esse usuário pode acessar ou quais operações pode executar.
+Imagine que temos dois usuários:
+- André: usuário comum.
+- Carlos: administrador.
+
+Ambos podem se autenticar, mas somente Carlos pode excluir usuários da aplicação.
+A pergunta que a autorização faz é : "O que você tem permissão para fazer?"
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Fluxo simplificado: cliente --> autenticação --> autorização --> recursos da api.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Como isso funciona em uma API REST?
+Imagine que sua API possui o seguinte endpoint:
+GET /tasks
+
+
+Esse endpoint retorna as tarefas de um usuário.
+
+Uma implementação poderia funcionar assim:
+1. O cliente envia uma requisição.
+2. A API verifica se o cliente está autenticado.
+3. A API identifica qual usuário está fazendo a requisição.
+4. A API verifica se ele pode consultar as tarefas.
+5. A API retorna os dados autorizados.
+Um detalhe importante: autenticação não significa simplesmente verificar se o usuário e a senha estão corretos. Precisamos também estabelecer uma maneira de 
+reconhecer esse usuário nas próximas requisições, sem exigir que ele envie sua senha novamente.
+
+É aí que entram sessões, tokens e estratégias de autenticação.
+
+### O que é o Passport.js? ###
+
+O passport é um middleware de autenticação para aplicações Node.js, especialmente utilizado em conjunto com Express.
+
+Mas o que significa middleware nesse contexto?
+
+É uma função que participa do processamento das requisições HTTP, podendo executar determinadas verificações antes de a requisição chegar à rota responsável pelo 
+recurso.
+
+O grande diferencial do passport é trabalhar com estratégias de autenticação(strategies)
+Ao invés de você implementar individualmente toda a lógica de cada mecanismo de autenticação, o Passport oferece uma estrutura na qual você configura a estratégia
+desejada.
+
+
+Por exemplo:
+- Autenticação com usuário e senha.
+- Autenticação HTTP Basic.
+- Autenticação com JWT.
+- Autenticação utilizando Google.
+- Autenticação utilizando OAuth.
+
+Imagine o passport como um gerenciador de diferentes métodos de autenticação.
+Ele não é um protocolo de de autenticação. Ele é apenas uma ferramenta que permite implementar diferentes mecanismos.
+
+Como o Passport funciona na prática?
+Vamos imaginar que queremos autenticar usuários da NTask utilizando e-mail e senha.
+
+Primeiro, instalamos as dependências:
+
+npm install passport passport-local
+
+
+- Depois configuramos uma estratégia:
+
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+
+passport.use(new LocalStrategy(
+    async (username, password, done) => {
+
+        const user = await User.findOne({
+            where: { email: username }
+        });
+
+        if (!user) {
+            return done(null, false);
+        }
+
+        const senhaValida = await verificarSenha(
+            password,
+            user.password
+        );
+
+        if (!senhaValida) {
+            return done(null, false);
+        }
+
+        return done(null, user);
+    }
+));
+
+
+Não se preocupe com a função verificarSenha: ela representa uma comparação segura entre a senha recebida e o hash armazenado no banco.
+
+Agora podemos proteger uma rota:
+
+app.post(
+    '/login',
+    passport.authenticate('local'),
+    (req, res) => {
+        res.json({
+            mensagem: 'Autenticado com sucesso!',
+            usuario: req.user
+        });
+    }
+);
+
+Observe essa parte:
+passport.authenticate('local')
+
+Ela executa a estratégia chamada local, que configuramos anteriormente.
+Se a autenticação funcionar, o Passport disponiilliza o usuário em: req.user 
+
+Se falhar, a rota não processe normalmente.
+
+Uma observação: o exemplo ilustra a estratégia Local, mas ainda não implementa um sistema completo de gerenciamento de sessões ou tokens. Também precisaríamos 
+tratar erros e não devolver informações sensíveis do usuário.
+
+
+### 3. Estratégias e protocolos de autenticação. ####
+
+.Basic Auth(Autênticação Básica).
+- O que é: 
+Um método simples de autenticação HTTP em que o cliente envia o nome de usuário e a senha codificados em Base64 no cabeçalho da requisição
+
+- Problema: 
+O Base64 não é criptografia, é apenas uma codificação facilmente reversível. Se a conexão não usar HTTPS, as credenciais podem ser interceptadas com facilidade. 
+É usado hoje quase apenas em testes ou APIs internas simples.
+
+
+.Digest Auth(Autenticação Digest).
+- O que é?
+Uma evolução do Basic Auth criada para corrigir a exposição da senha em texto puro ou Base64.
+
+- Como funciona?
+O servidor envia um valor aleatório chamado nonce. O cliente combina o usuáro, senha e o nonce, gerando um hash (unsando MD5) e devolve ao servidor. A senha real
+nunca trafega pela rede.
+
+- Status atual: 
+Embora seja mais seguro que o Basic Auth, ele ainda depende de algoritmos antigos (como MD5) e caiu em desuso em aplicações modernas web
+
+
+.OAuth( e OAuth 2.0).
+- O que é:
+O OAuth é um framework de autorização. Ele permmite que um aplicativo de terceiro acesse dados de um usuário em outro serviço.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Exemplo: Um aplicativo de edição pede permissão para acessar suas fotos do google fotos, mas você não precisa digitar suas credenciais(senha e usuário).
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+A diferença principal: O OAuth responde à pergunta: “O que este aplicativo tem permissão para fazer?”. Ele emite um Access Token. O OAuth 2.0 é a versão atual e 
+padrão da indústria (substituindo a antiga versão 1.0)
+
+.OpenID Connect(OIDC)
+- O que é: 
+Uma camada de identidade criada em cima do OAuth 2.0.
+
+- A diferença principal:
+Enquanto o OAuth cuida da autorização(acesso aos recursos), o OpenID connect cuida da autenticação(saber quem é o usuário). É o que está por trás do botão 
+"Entrar com google", pois ele fornece um ID token(frequentemente em formato JWT) com os dados do perfil do usuário (nome, email)
+
+.JWT (JSON Web Token)
+- O que é:
+Um formato padrão(RFC 7519) para transmissão segura de informações entre partes com um objeto JSON. 
+
+- Como funciona?
+Um JWT é composto por 3 partes separadas por pontos (cabeçalho.carga_util.assinatura):
+
+1.Header(cabeçalho):
+Define o tipo de token e o algoritmo da assinatura.
+
+2.Payload(carga):
+Contém as claims(declarações/dados sobre o usuário ou permissões: sub, exp, role)
+
+3.Signature: Uma assinatura criptográfica gerada pelo emissor para garantir que o token não foi adulterado no meio do caminho.
+
+Observação: O conteúdo interno de um JWT é apenas codificado em Base64URL(não criptografado). Qualquer um que interceptá-lo consegue ler o texto, mas não consegue
+alterá-lo sem invalidar a assinatura. É muito utilizado como Access Token no OAuth 2.0 ou como ID Token no OpenID Connect
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+jwt é usado hoje em dia para substituir basic auth e sua evolução o digest auth? se não, o que é usado hoje me dia?
+Sim, o JWT é bastante utilizado atualmente em APIs, mas existe uma diferença importante: JWT não é exatamente um substituto direto do Basic Authentication ou do 
+Digest Authentication.
+
+Eles resolvem problemas relacionados, mas pertencem a categorias diferentes.
+
+Vamos entender como isso funciona no desenvolvimento backend moderno.
+
+1. Basic e Digest ainda são utilizados?
+Basic e Digest são mecanismos de autenticação definidos para HTTP.
+
+Basic: envia usuário e senha codificados em Base64 no cabeçalho HTTP.
+
+Digest: utiliza um mecanismo de desafio e resposta para evitar transmitir diretamente a senha.
+
+Ambos continuam fazendo parte das especificações HTTP, mas não são necessariamente a escolha mais comum para autenticação de usuários em aplicações web modernas.
+
+O Basic ainda aparece em situações como:
+
+APIs internas.
+
+Integrações entre sistemas.
+
+Autenticação simples em ferramentas administrativas.
+
+Alguns serviços que exigem credenciais HTTP.
+
+O Digest, por sua vez, tem utilização bem mais limitada atualmente.
+
+2. O que é utilizado atualmente?
+Atualmente, existem algumas abordagens bastante comuns:
+
+A) Sessões + Cookies
+Muito utilizado em aplicações web tradicionais
+É uma abordagem bastante consolidada.
+
+O funcionamento:
+
+O usuário envia e-mail e senha.
+
+O servidor verifica as credenciais.
+
+O servidor cria uma sessão e armazena seus dados.
+
+O servidor envia um identificador de sessão ao navegador por meio de um cookie.
+
+Nas próximas requisições, o navegador envia esse cookie automaticamente.
+
+O servidor utiliza o identificador para recuperar a sessão.
+
+Exemplo de resposta HTTP:
+
+HTTP/1.1 200 OK
+Set-Cookie: sessionId=abc123; HttpOnly; Secure; SameSite=Lax
+Aqui, diferentemente do JWT, o servidor mantém informações sobre a sessão.
+
+B) Access Token + Refresh Token
+Muito utilizado em APIs modernas
+Essa abordagem é bastante comum em arquiteturas que utilizam OAuth 2.0 e OpenID Connect.
+
+O funcionamento:
+
+O usuário realiza login.
+
+O servidor verifica as credenciais.
+
+O servidor fornece um Access Token.
+
+O cliente utiliza o Access Token para acessar os recursos protegidos.
+
+Quando o Access Token expira, o cliente pode utilizar o Refresh Token para obter outro.
+
+Exemplo:
+
+Dois tipos de tokens
+
+Access Token
+Acesso aos recursos
+
+Possui validade relativamente curta e é apresentado nas requisições à API.
+
+Refresh Token
+Renovação da autenticação
+
+Permite obter novos Access Tokens sem exigir que o usuário informe novamente suas credenciais.
+
+O Access Token pode ser um JWT ou um token opaco (uma sequência aleatória sem conteúdo legível pelo cliente).
+
+C) OAuth 2.0 + OpenID Connect
+Autenticação e autorização federadas
+Muito utilizados quando uma aplicação permite login por meio de provedores externos, como Google, Microsoft e outros.
+
+OpenID Connect: verifica a identidade do usuário.
+
+OAuth 2.0: permite conceder acesso a recursos protegidos.
+
+JWT: pode ser utilizado para representar os tokens envolvidos.
+
+A RFC 9700 apresenta as práticas atuais de segurança para OAuth 2.0. 
+
+RFC Editor
++2
+
+3. Então, JWT é melhor que sessões?
+Não necessariamente!
+
+Essa é uma questão interessante para quem está aprendendo backend.
+
+Característica
+
+Sessões
+
+JWT
+
+Estado no servidor
+
+Sim
+
+Não necessariamente
+
+Identificação
+
+Cookie de sessão
+
+Token
+
+Revogação imediata
+
+Mais simples
+
+Exige mecanismos adicionais
+
+Escalabilidade
+
+Exige gerenciamento compartilhado de sessões em ambientes distribuídos
+
+Pode facilitar validação distribuída
+
+Uso em APIs
+
+Sim
+
+Sim
+
+O JWT não é automaticamente mais seguro ou mais rápido. A escolha depende da arquitetura.
+
+Inclusive, a OWASP recomenda avaliar se JWT é realmente necessário: em muitas aplicações, sessões tradicionais resolvem o problema com menos complexidade. 
+
+OWASP Cheat Sheet Series
++1
+
+4. O que eu utilizaria na sua NTask?
+Para fins de aprendizado, faria o seguinte:
+
+Implementaria login com e-mail e senha.
+
+Utilizaria bcrypt ou Argon2 para armazenar senhas com segurança.
+
+Implementaria autenticação com JWT.
+
+Criaria um middleware para validar o token.
+
+Protegeria as rotas de tarefas.
+
+Implementaria autorização para garantir que um usuário não consiga acessar tarefas de outro usuário.
+
+Depois, estudaria Passport.js para entender como ele organiza e abstrai essas estratégias.
+
+Uma última distinção para guardar: Basic e Digest são mecanismos de autenticação HTTP; JWT é um formato de token; OAuth 2.0 é um framework de autorização; sessões 
+são uma forma de manter o estado de autenticação do usuário.
+
+Essa distinção vai ajudar bastante quando você começar a implementar autenticação de verdade na NTask.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------

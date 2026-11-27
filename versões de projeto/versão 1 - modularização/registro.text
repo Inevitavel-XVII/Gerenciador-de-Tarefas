@@ -1,0 +1,307 @@
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CÓDIGO FONTE: 
+Ntask-API: http://github.com/caio-ribeiro-pereira/ntask-api
+Ntask-WEB: http://github.com/caio-ribeiro-pereira/ntask-web
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4. Criando o projeto piloto.
+
+Você vai digitar os seguintes comandos:
+
+(1) Cria uma nova pasta chamada de ntask-api no diretório atual do seu sistema
+mkdir ntask-api
+(2) Navega para dentro da pasta que acabou de ser criada, mudando o foco do terminal para ela 
+cd ntask-api
+(3) Inicializa o gerenciador de pacotes (NPM) dentro da pasta, abrindo o assistente para criar o arquivo package.json 
+npm init
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Vai acontecer o seguinte:
+
+PS C:\Users\Asus\OneDrive\Documentos\1 - Programação\2 - NODE.JS\3 - Livro Construindo uma API REST com NODE.js\2 - Criando o projeto manualmente> mkdir ntask-api
+
+
+    Diretório: C:\Users\Asus\OneDrive\Documentos\1 - Programação\2 - NODE.JS\3 - Livro Construindo uma API REST com NODE.js\2 - Criando o projeto manualmente
+
+
+Mode                 LastWriteTime         Length Name                                                                                                            
+----                 -------------         ------ ----                                                                                                            
+d-----        26/10/2026     10:55                ntask-api                                                                                                       
+
+
+PS C:\Users\Asus\OneDrive\Documentos\1 - Programação\2 - NODE.JS\3 - Livro Construindo uma API REST com NODE.js\2 - Criando o projeto manualmente> cd ntask-api
+PS C:\Users\Asus\OneDrive\Documentos\1 - Programação\2 - NODE.JS\3 - Livro Construindo uma API REST com NODE.js\2 - Criando o projeto manualmente\ntask-api> npm init
+This utility will walk you through creating a package.json file.
+It only covers the most common items, and tries to guess sensible defaults.
+
+See `npm help init` for definitive documentation on these fields and exactly what they do.
+
+Use `npm install <pkg>` afterwards to install a package and save it as a dependency in the package.json file.
+
+Press ^C at any time to quit.
+package name: (ntask-api) 
+version: (1.0.0) 
+description: API  de gestão de tarefas
+entry point: (index.js) 
+test command: 
+git repository: 
+keywords: 
+author: André Pereira da Costa
+license: (ISC) 
+type: (commonjs) 
+About to write to C:\Users\Asus\OneDrive\Documentos\1 - Programação\2 - NODE.JS\3 - Livro Construindo uma API REST com NODE.js\2 - Criando o projeto manualmente\ntask-api\package.json:
+
+{
+  "name": "ntask-api",
+  "version": "1.0.0",
+  "description": "API  de gestão de tarefas",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "André Pereira da Costa",
+  "license": "ISC",
+  "type": "commonjs"
+}
+
+
+Is this OK? (yes) yes
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Ao digitar o npm init, você vai iniciar o assistente interativo para criar o arquivo package.json do seu projeto Node.js. Você pode preencher ou confirmar as
+informações básicas do projeto diretamente no terminal.
+Para prosseguir, você pode seguir os passos sequenciais abaixo:
+. Pressionar enter em cada pergunta para aceitar o valor padrão sugerido entre parênteses - por exemplo, pressionar Enter em pakage name:(ntask-api) definirá o nome
+como ntask-api.
+. Digite um valor personalizado antes de pressionar o Enter caso queira mudar campos como versão, descrição ou ponto de entrada (geralmente index.js).
+. Digite yes e pressione enter ao final, quando o terminal exibir o resumo das configurações e perguntar "Is this OK? (yes)"
+
+ATALHO RÁPIDO:
+Se você preferir pular todas as perguntas e criar o arquivo instantaneamente com todos os valores padrão, você pode cancelar o processo atual pressionando ctrl+c 
+e executar o seguinte comando:
+
+npm init -y
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+No final, será gerado o arquivo pakage.json com os seguintes campos (vai depender da versão):
+
+{
+  "name": "ntask-api",
+  "version": "1.0.0",
+  "description": "API  de gestão de tarefas",
+  "license": "ISC",
+  "author": "André Pereira da Costa",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
+
+Na versão do livro o pakage.json é esse:
+
+{
+  "name": "ntask-api",
+  "version": "1.0.0",
+  "description": "API  de gestão de tarefas",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "André Pereira da Costa",
+  "license": "ISC"
+}
+
+Na versão do livro o node não tem 100% de suporte ao ES6, então é usado um módulo que emula recursos interessantes. E é usado o Babel, que é um Transpiler.
+O que é um transpiler?
+Ele converte um código de javascript moderno para um código de versões antigas que possam ser lidos ler, por exemplo:
+
+### JS Moderno ###
+const somar = (a, b) => a + b;
+
+### JS Antigo ###
+var somar = function(a, b) {
+    return a + b;
+};
+
+
+Execute o comando
+
+npm install  babel --save
+
+
+Em seguida, será necessário remover do package.json os campos license e script.test. Depois, será incluido o campo script.start para habilitar o comando npm start,
+que será responsável por iniciar nossa API. Esse comando vai compilar o código ES6/7 e iniciar o sistema, tudo isso por meio do comando babel-node index.js. abaixo
+você verá o resutado do package.json.
+
+{
+  "name": "ntask-api",
+  "version": "1.0.0",
+  "description": "API  de gestão de tarefas",
+  "author": "André Pereira da Costa",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "babel-node index.js"
+  },
+  "dependencies": {
+    "babel": "^5.8.38"
+  }
+}
+
+Agora há uma descrição mínima do projeto, tudo isso, no arquivo package.json. Será necessário instalar o framework express, rodando o seguinte comando.
+npm install express --save
+
+Em seguida você fará um código que carrega o módulo EXPRESS, cria um simples endpoint get via função app.get("/") e iniciar o servidor na porta 3000 por meio da
+funlção app.listen. Para isso ocorrer é preciso criar o arquivo princicpal index.js.
+
+###CÓDIGO###
+import express from "express";
+const PORT = 3000;
+const app = express();
+
+app.get("/", (req,res) => res.json({status: "NTask API"}));
+app.listen(PORT, ()=> console.log(`NTask API - porta ${PORT}`));
+###FINAL DO CÓDIGO###
+
+
+###Implementando um recurso Estático###
+O padrão de desenvolvimento de uma API REST trabalha em cima do conceito de criação e manipulação de recursos. Esses recursos são entidades da aplicação utilizada 
+para consulta, atualizar e excluir dados. Tudo é baseado em manipular dados de um recurso.
+
+Por exemplo, nessa aplicação o recurso principal será a entidade tarefas, que será acessada pelo endpoint "/task". Esta entidade terá alguns dados que descreverão
+que tipo de informação será mandito nesse recurso.
+
+###Código###
+import express from "express";
+const PORT = 3000;
+const app = express();
+
+app.set("json spaces", 4); // faz com que o resultados retornem um JSON formatado
+
+app.get("/", (req,res) => res.json({status: "NTask API"}));
+
+app.get("/tasks",(req,res)=>{
+    res.json({
+        task:[
+            {title: "Fazer compras"},
+            {title: "Consertar o pc"},
+        ]
+    });
+});
+
+app.listen(PORT, ()=> console.log(`NTask API - porta ${PORT}`));
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Organizando o carregamento dos módulos.
+
+Será usado o padrão MVR(Model-View-Router) para organizar a aplicação de forma simplificada. Ela evita a necessidade de ter todos os endpoints em um único arquivo.
+O módulo consign permite carregar e injetar dependências de forma bem simples. Aparentemente, a biblioteca consign parece ser mais do mesmo pois o javascript já possui
+um sistema de módulos. Entretanto, a biblioteca consign oferece uma camada de automação e facilitando a escrita do código. 
+
+consign()                ---->	     Inicializa o Consign.
+.include("routers")	     ---->       Indica a pasta que contém os módulos que devem ser carregados.
+.into(app)	                         Integra os módulos carregados à aplicação Express.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+###Se a api crescer e tenha 30 arquivos de rotas, você vai precisar fazer o seguinte:
+
+import usuarios from "./routers/usuarios.js";
+import tarefas from "./routers/tarefas.js";
+import projetos from "./routers/projetos.js";
+import comentarios from "./routers/comentarios.js";
+import autenticacao from "./routers/autenticacao.js";
+
+usuarios(app);
+tarefas(app);
+projetos(app);
+comentarios(app);
+autenticacao(app);
+
+###Com consign, você faria:
+
+const express = require('express');
+const consign = require('consign');
+
+const app = express();
+
+consign({ verbose: false })
+  .include('db.js')
+  .then('models')
+  .then('associations.js')
+  .then('auth.js')
+  .then('middlewares.js')
+  .then('routes')
+  .then('boot.js')
+  .into(app);
+
+module.exports = app;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Instale-o via comando:
+
+npm install consign --save
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+###CÓDIGO ESCRITO NO ARQUIVO TASKS DO DIRETÓRIO MODELS###
+
+module.exports=app=>{
+    return{
+        findAll:(params, callback)=>{
+            return callback ([
+                {title: "Fazer Compras"},
+                {title: "Consertar o PC"},
+            ]);
+        }
+    };
+};
+
+Esse modelo inicialmente terá apenas uma função tasks.findAll() que receberá dois argumentos como parâmetro: params e callback. A variável params não será utilizada
+no momento, mas ela servirá de base para enviar alguns filtros de pesquisa SQL, algo será abordado nos próximos capítulos. Já o segundo argumento é a função de 
+callback que retorna de forma assícrona um array stático de tarefas.
+
+Para chamá-lo dentro de routers/task.js, você terá de carregar esses modelos por meio da variável app. Afinal, os módulos de diretórios inseridos na função consign()
+injetam suas lógicas dentro dessa variável principal da aplicação.
+
+###CÓDIGO ESCRITO NO ARQUIVO TASKS DO DIRETÓRIO ROUTERS### -> FOI TUDO MODIFICADO.
+
+module.exports=app=>{
+    const Tasks=app.models.tasks;
+    app.get("/tasks",(req,res)=>{
+        Tasks.findAll({},(tasks)=>{
+            res.json({task:tasks});
+        });
+    });
+};
+
+A pasta libs/middlewares.js será responsável por carregar toda a lógica dos middlewares e configurações específicas do express.
+Crie o arquivo libs/middlewares e escreva o código abaixo:
+
+module.exports=app=>{
+    app.set("port", 3000);
+    app.set("json spaces", 4);
+};
+
+Crie o arquivo libs/boot.js e escreva o código abaixo:
+A pasta libs/boots.json será responsável por iniciar o servidor através da função app.listen().
+module.exports=app=>{
+  app.listen(app.get("port"),()=>{
+    console.log(`NTask API - porta ${app.get("port")}`);
+  });
+}
+
+vá no arquivo princicpal index.js e edite novamente:
+
+import express from "express";
+import consign from "consign";
+
+const app = express();
+
+consign()
+.include("models")
+.then("libs/middlewares.js")
+.then("routes")
+.then("libs/boot.js")
+.into(app);
+
+Para testar essas novas alterações, reinicie o servidor e acesse novamente o endpoint: http://localhost:3000/tasks

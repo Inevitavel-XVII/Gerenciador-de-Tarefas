@@ -1,0 +1,189 @@
+Nessa versão, as alterações criadas na aplicação foi a implementação do crud dos recursos da api:
+pasta libs/middlewares.js:
+
+import bodyParser from "body-parser";
+
+module.exports = app => {
+    app.set("port", 3000);
+    app.set("json spaces", 4);
+    app.use(bodyParser.json());
+    app.use((req, res, next) => {
+        if (req.body) {
+            delete req.body.id;
+        }
+        next();
+    });
+};
+
+pasta routes/tasks.js:
+
+module.exports=app=>{
+    const Tasks=app.db.models.Tasks;
+    app.route("/tasks")
+        .get((req,res)=>{
+            Tasks.findAll({})
+            .then(result => res.json(result))
+            .catch(error=>{
+                res.status(412).json({msg:error.message});
+            });
+        })
+        .post((req,res)=>{
+            Tasks.create(req.body)
+            .then(result => res.json(result))
+            .catch(error=>{
+                res.status(412).json({msg:error.message});
+            });
+        });
+    
+    app.route("/tasks/:id")
+        .get((req,res)=>{
+            Tasks.findOne({where:req.params})
+            .then(result =>{
+              if(result){
+                res.json(result);
+              }else{
+                res.sendStatus(404);
+              }
+            })
+            .catch(error=>{
+                res.status(412).json({msg: error.message});
+            });
+        })
+        .put((req,res)=>{
+            Tasks.update(req.body, {where: req.params})
+            .then(result => res.sendStatus(204))
+            .catch(error=>{
+                res.status(412).json({msg:error.message});
+            });
+        })
+        .delete((req,res)=>{
+            Tasks.destroy({where: req.params})
+            .then(result => res.sendStatus(204))
+            .catch(error=>{
+                res.status(412).json({msg:error.message});
+            });
+        });
+};
+
+pasta routes/users.js:
+
+module.exports=app=>{
+    const Users=app.db.models.Users;
+
+    app.get("/users/:id",(req, res)=>{
+        Users.findById(req.params.id,{
+            attributes: ["id", "name", "email"]
+        })
+        .then(result => res.json(result))
+        .catch(error=>{
+            res.status(412).json({msg: error.message});
+        });
+    });
+
+    app.delete("/users/:id",(req, res)=>{
+        Users.destroy({where: {id: req.params.id}})
+        .then(result => res.sendStatus(204))
+        .catch(error=>{
+            res.status(412).json({msg: error.message});
+        });
+    });
+
+    app.post("/users",(req, res)=>{
+        Users.create(req.body)
+        .then(result => res.json(result))
+        .catch(error=>{
+            res.status(412).json({msg: error.message});
+        });
+    });
+
+};
+
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Para que você entenda o que está escrito acima é importante que você entenda sobre protocolo http:
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Eu tive que mexer na versão do sequelize para que não houvesse erros relacionados a versão dele. Execute os comandos node abaixo:
+
+npm uninstall sequelize
+npm install sequelize@3 --save-exact
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Para testa as rotas, será necessário o uso do software Postman. O Postman é uma plataforma colaborativa usada para desenvolver, testar e documentar API através de
+uma interface gráfica. Ele permite que programadores enviem pedidos de dados para servidores e analisem as respostas sem precisar escrever todo o código de um site
+ou aplicativo.
+
+Na minha situação, eu precisei instalá-lo na minha máquina porque ao usar a versão web não seria possível fazer os testes. Baixei o aplicativo e escolhi as pasta 
+em que a aplicação está rodando.
+
+O livro passa alguns comando para você testar os endpoint:
+
+1 - Escolher o método POST com endereço http://localhost:3000/tasks 
+2 - Clique no menu BODY, escolha a opção RAW e altere o formato TEXT para JSON (application/json)
+3 - Crie o JSON {"title":"Durmir"} e clique no botão SEND
+4 - Modifique o mesmo JSON para {"title":"Estudar"} e clique novamente no SEND 
+
+observação: É importante que você, ao testar, rode o servidor antes. Usando o npm start.
+
+Vou mostrar o que vai aparecer ao digitar os comandos acima para testar os endpoint:
+
+get ---> http://localhost:3000/tasks 
+
+[
+    {
+        "id": 1,
+        "title": "Durmir",
+        "done": false,
+        "created_at": "2026-11-12T00:22:57.998Z",
+        "updated_at": "2026-11-12T00:22:57.998Z",
+        "user_id": null
+    }
+]
+
+post ---> http://localhost:3000/users --> body {"name":"John", "email":"john@john.com","password":"123"}
+
+get ---> http://localhost:3000/users/1
+
+{
+    "id": 1,
+    "name": "John",
+    "email": "john@connor.net"
+}
+
+Password não é registrado pois essa propriedade não está definida no model. Para você entender melhor sobre isso, abra o arquivo verificarBanco.js. Nele está o código
+que verifica a estrutura do banco de dados e das tabelas. Para fazer com que ele funcione, escreva "node verificarBanco.js". É importante que você escolha qual função
+você vai ser executada. Apenas comente a chamada da função que você não vai usar e use "node verificarBanco.js".
+
+
+Eu tive um problema ao testar esses endpoint. Quando eu tentei fazer:
+
+post ---> http://localhost:3000/users --> body {"name":"John", "email":"john@john.com","password":"123"}
+
+Eu cometi o erro de escrever "nome" ao invés de "name" nos modelos js que estão definidos em models/tasks e models/users. Então mudei de "nome" para "name" nos
+arquivos tasks e users da pasta models, e escrevi o código {force: true} dentro de sync() de libs/boot.js:
+
+código original:
+module.exports=app=>{
+    app.db.sequelize.sync().done(()=>{
+        app.listen(app.get("port"),()=>{
+           console.log(`NTask API - porta ${app.get("port")}`);
+        });
+    });
+}
+
+código temporário para recriar a tabela:
+module.exports=app=>{
+    app.db.sequelize.sync({force: true}).done(()=>{
+        app.listen(app.get("port"),()=>{
+           console.log(`NTask API - porta ${app.get("port")}`);
+        });
+    });
+}
+
+Usei "npm start", apertei ctrl+c para encerrar o servidor, apaguei {force: true} de dentro de sync() e a requisição post voltou a funcionar
+
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,432 @@
+/*
+###### TUDO O QUE ESTÁ ESCRITO EU LI NA DOCUMENTAÇÃO DO SEQUELIZE ######
+
+O que é o sequelize?
+
+Sequelize é uma ferramenta ORM baseada em Promises para Node.js, compatível com Postgres, MySQL, MariaDB, SQLite, Microsoft SQL Server, Oracle, Amazon Redshift e 
+Data Cloud da SnowFlake. Oferece suporte rousto a transações, relações, carregamento antecipado e lento e replicação de leitura e muito mais.
+O Sequelize segue o versionomento Semântico e é compatível com Node v10 e versões superiores.
+
+O que é uma ORM?
+###Explicação simples###
+ORM é uma ferramenta ou técnica que simplifica a interação entre aplicações orientada a objetos e banco de dados relacionais, permitindo que desenvolvedores tra-
+balhem com objetos e banco de dados relacionais, permitindo que desenvolvedores trabalhem com objetos no código enquanto o ORM cuida da persistência e manipulação dos
+dados no banco de dados.  
+
+###Explicação mais técnica###
+.Definição e Funcionamento.
+ORM, ou Mapeamento Objeto-Relacional, é uma técnica de desenvolvimento de software que traduz objetos de um programa em registros de um banco de dados relacional e 
+vice-versa .Em vez de escrever comandos SQL diretamente, o desenvolvedor trabalha com objetos, classes e métodos, enquanto o ORM gera automaticamente as consultas 
+SQL necessárias para criar, ler, atualizar e excluir dados (CRUD) no banco
+
+O principal objetivo do ORM é resolver o “Impedance Mismatch”, ou seja, o descompasso entre o paradigma orientado a objetos (focado no “como fazer”) e o paradigma 
+relacional (focado no “o que fazer”). Ele mapeia classes para tabelas, atributos para colunas e relacionamentos entre objetos para relacionamentos entre tabelas, 
+permitindo que a comunicação entre aplicação e banco de dados seja transparente
+
+###Vantagens no uso de ORM###
+.Produtividade: Reduz a necessidade de escrever SQL repetitivo, acelerando o desenvolvimento.
+.Manutenção Facilitada: Alterações na estrutura do banco podem ser refletidas no código de forma mais simples
+.Segurança: ajuda a prevenir vunerabilidades como SQL Injection, tratando parâmetros de forma segura.
+.Abstração: Permite que os desenvolvedores foquem na regra de negócios sem se preocupar com banco de dados
+
+Ele segue o padrão Active Record, onde cada modelo representa uma tabela e cada instância representa uma linha. 
+
+### Principais recursos ###
+.Modelos e tipos de dados: Definição de tabelas via classes/objetos. 
+
+.CRUD simplificado: Métodos como create, findAll, update, destroy. 
+
+.Relacionamentos: Suporte a 1:1, 1:N e N:N com carregamento ansioso (eager) e preguiçoso (lazy). 
+
+.Transações e migrações: Controle de versão do banco e operações ACID. 
+
+.Segurança: Proteção contra SQL Injection e escape automático.
+
+### Como instalar? ###
+
+Digite no terminal:
+npm install sqlite3 sequelize --save
+
+
+
+.Noções Básicas de Modelagem:
+
+Os modelos são a essência do Sequelize. Um modelo é uma abstração que representa uma tabela em seu banco de dados. No Sequelize, é uma classe que extende a classe
+`Model`.
+
+O modelo informa ao Sequelize várias coisas sobre a entidade que ele representa, como o nome da tabela do banco de dados e várias colunas que ela possui.
+O modelo no Sequelize possui um nome, mas não é obrigatório ser idêntico ao nome da tabela que ele representa no banco de dados. Normalmente os modelos possuem o 
+nome no singular (como `model` User), enquanto as tabelas possuem o nome no plural (como `table` Users), embora isso seja totalmente configurável.
+
+.Definição do Modelo:
+Em Sequelize, os modelos podem ser definidos de duas maneiras equivalentes:
+
+- Chamando sequelize.define(modelName, attributes, options)
+- Extendendo o modelo e chamando init(atrributes, options)
+
+Exemplo:
+Queremos um modelo para representar usuários, que possuem o nome firstName e uma idade lastName. Queremos que nosso modelo se chame `users` (User) e a tabela 
+que ele
+representa se chama `table` Users no banco de dados.
+
+###Usando sequelize.difine###
+
+const { Sequelize, DataTypes } = require('sequelize');
+const sequelize = new Sequelize('sqlite::memory:');
+
+const User = sequelize.define(
+  'User',
+  {
+    // Model attributes are defined here
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      // allowNull defaults to true
+    },
+  },
+  {
+    // Other model options go here
+  },
+);
+
+###Modelo de extensão###
+
+const { Sequelize, DataTypes, Model } = require('sequelize');
+const sequelize = new Sequelize('sqlite::memory:');
+
+class User extends Model {}
+
+User.init(
+  {
+    // Model attributes are defined here
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      // allowNull defaults to true
+    },
+  },
+  {
+    // Other model options go here
+    sequelize, // We need to pass the connection instance
+    modelName: 'User', // We need to choose the model name
+  },
+);
+
+// the defined model is the class itself
+console.log(User === sequelize.models.User); // true
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+
+##Associações###
+
+O sequelize suporta as associações padrões: Um-para-Um, Um-para-Muitos e Muitos-para-Muitos.
+Para isso, o Sequelize fornece quatro tipos de associações que devem ser combiandas para criá-las:
+
+HasOne
+BelongsTo
+HasMany
+BelongsToMany
+
+O guia começará explicando como definir esses quatros tipos de asociações e, em seguida, explicará como combiná-las para definir os três tipos de associações padrão
+(um para um, um para muitos e muitos para muitos).
+
+###Definindo associações dentro do Sequelize###
+
+Os quatro tipos de associação são definidos de maneira muito semelhante. Digamos que temos dois modelos, AA e BB. Para informar ao Sequelize que você deseja uma 
+associação entre os dois, basta uma chamada de função:
+
+const A = sequelize.define('A'  ... );
+const B = sequelize.define('B'  ... );
+
+A.hasOne(B); // A HasOne B
+A.belongsTo(B); // A BelongsTo B
+A.hasMany(B); // A HasMany B
+A.belongsToMany(B, { through: 'C' }); // A BelongsToMany B through the junction table C
+
+
+Todos eles aceitam um objeto de opções como segundo parâmetro (opcional para os três primeiros, obrigatório para belongsToManyconter pelo menos a 
+throughpropriedade):
+
+A.hasOne(B, { options });
+A.belongsTo(B, { options });
+A.hasMany(B, { options });
+A.belongsToMany(B, { through: 'C' / options / });
+
+A ordem em que a associação é definida é relevante. Em outras palavras, a ordem importa, nos quatro caso. Em todos os exemplos acima, A é chamado de modelo de 
+origem
+e B é chamado de modelo de destino. Essa terminologia é importante
+
+A.hasOne(B):
+- Um para Um
+- Chave estrangeira definida no modelo B
+
+A.belongsTo(B):
+- Um para Um
+- Chave estrangeira definida no modelo A
+
+A.hasMany(B):
+- Um para Muitos
+- Chave estrangeira definida no modelo B
+
+OBS: Essas três chamadas farão com que o Sequelize adicione automaticamente chaves estrangeiras aos modelos apropriados (a não ser que já estejam presentes)
+
+A.belongsToMany(B, {throught: 'C'}):
+- Muitos para Muitos entre A e B
+- Usa a tabela C como junção
+associação significa que existe uma relação Muitos-para-Muitos entre Ae B, usando a tabela Ccomo tabela de junção , que terá as chaves estrangeiras 
+(aId e bId, por exemplo). O Sequelize criará automaticamente esse modelo C (a menos que ele já exista) e definirá as chaves estrangeiras apropriadas nele.
+
+### Criando os relacionamentos padrão ###
+
+Como mencionado, geralmente as associações do Sequelize são definidas em pares. Em resumo:
+
+.Para criar uma relação Um para Um é necessário usar hasOne e belongsTo são usadas em conjunto
+.Para criar uma relação Um para Muitos é necessário usar hasMany e belongsTo são usadas em conjunto
+.Para criar uma relação Muitos para Muitos é necessário usar belongsToMany, duas chamadas são usadas em conjunto
+ - NOTA: existe também um relacionamento Super Muitos-para-Muitos , que utiliza seis associações simultaneamente, e será abordado no guia de relacionamentos 
+ Muitos-para-Muitos Avançados .
+
+
+Relacionamentos individuais:
+
+Filosofia:
+
+Antes de nos aprofundarmos nos aspectos do uso do Sequelize, é útil dar um passo atrás e considerar o que acontece com um relacionamento Um-para-Um.
+
+Vamos supor que temos dois modelos, Foo e Bar. Queremos estabelecer uma relação um-para-um entre Foo e Bar. Sabemos que, em um banco de dados relacional, 
+isso será feito estabelecendo uma chave estrangeira em uma das tabelas. Portanto, neste caso, uma pergunta muito relevante é: em qual tabela queremos que essa 
+chave estrangeira esteja? Em outras palavras, queremos Foo ter uma bar Idcoluna `Foo` ou Bar uma fooId coluna `Bar`?
+
+Em princípio, ambas as opções são válidas para estabelecer uma relação um-para-um entre Foo e Bar. No entanto, quando dizemos algo como "existe uma relação 
+um-para-um entre Foo e Bar" , não fica claro se a relação é obrigatória ou opcional. Em outras palavras, pode existir um Foo sem um Bar? Pode existir um Bar 
+sem um Foo? As respostas a essas perguntas ajudam a determinar onde queremos que a coluna da chave estrangeira esteja localizada.
+
+Meta:
+
+Para o restante deste exemplo, vamos assumir que temos dois modelos, Foo(A) e Bar(B). Queremos estabelecer um relacionamento Um-para-Um entre eles, de forma que 
+A Bar receba uma fooId coluna
+
+Implementação:
+
+Foo.hasOne(Bar);
+Bar.belongsTo(Foo);
+
+Como nenhuma função foi passada, o Sequelize inferirá o que fazer a partir dos nomes dos modelos. Neste caso, o Sequelize sabe que uma fooId coluna deve ser 
+adicionada a Bar.
+
+Dessa forma, Bar.sync() ao executar o comando acima, será exibido o seguinte SQL (no PostgreSQL):
+
+CREATE TABLE IF NOT EXISTS "foos" (
+  /* ... */
+);
+CREATE TABLE IF NOT EXISTS "bars" (
+  /* ... */
+  "fooId" INTEGER REFERENCES "foos" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+  /* ... */
+);
+
+Opções
+Diversas opções podem ser passadas como segundo parâmetro da chamada de associação.
+
+onDeleteeonUpdate
+Por exemplo, para configurar os ON DELETEcomportamentos ON UPDATE, você pode fazer o seguinte:
+
+Foo.hasOne(Bar, {
+  onDelete: 'RESTRICT',
+  onUpdate: 'RESTRICT',
+});
+Bar.belongsTo(Foo);
+
+As opções possíveis são RESTRICT, CASCADE, NO ACTION, SET DEFAULTe SET NULL.
+
+Os valores padrão para as associações Um-Para-Um são SET NULLpara ON DELETEe CASCADEpara ON UPDATE.
+
+Personalizando a chave estrangeira
+Tanto a chamada hasOne`and` quanto belongsToa chamada mostradas acima inferirão que a chave estrangeira a ser criada deve ser chamada de ` fooId. Para usar um 
+nome diferente, como myFooId:
+
+// Option 1
+Foo.hasOne(Bar, {
+  foreignKey: 'myFooId',
+});
+Bar.belongsTo(Foo);
+
+// Option 2
+Foo.hasOne(Bar, {
+  foreignKey: {
+    name: 'myFooId',
+  },
+});
+Bar.belongsTo(Foo);
+
+// Option 3
+Foo.hasOne(Bar);
+Bar.belongsTo(Foo, {
+  foreignKey: 'myFooId',
+});
+
+// Option 4
+Foo.hasOne(Bar);
+Bar.belongsTo(Foo, {
+  foreignKey: {
+    name: 'myFooId',
+  },
+});
+
+Como mostrado acima, a foreignKeyopção aceita uma string ou um objeto. Ao receber um objeto, este será usado como definição da coluna, assim como em uma 
+sequelize.definechamada padrão. Portanto, especificar opções como type`<string>`, allowNull` defaultValue<object>`, etc., funciona perfeitamente.
+
+Por exemplo, para usar UUIDcomo tipo de dados de chave estrangeira em vez do padrão ( INTEGER), você pode simplesmente fazer:
+
+const { DataTypes } = require('Sequelize');
+
+Foo.hasOne(Bar, {
+  foreignKey: {
+    // name: 'myFooId'
+    type: DataTypes.UUID,
+  },
+});
+Bar.belongsTo(Foo);
+
+Associações obrigatórias versus associações opcionais
+Por padrão, a associação é considerada opcional. Em outras palavras, em nosso exemplo, o fooIdvalor pode ser nulo, o que significa que pode existir um Bar sem um 
+Foo. Alterar isso é tão simples quanto especificar allowNull: falsenas opções da chave estrangeira:
+
+Foo.hasOne(Bar, {
+  foreignKey: {
+    allowNull: false,
+  },
+});
+// "fooId" INTEGER NOT NULL REFERENCES "foos" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT
+
+
+Relações de um para muitos
+Filosofia
+Associações um-para-muitos conectam uma fonte a múltiplos destinos, enquanto todos esses destinos estão conectados apenas a essa única fonte.
+
+Isso significa que, diferentemente da associação Um-para-Um, na qual tínhamos que escolher onde a chave estrangeira seria colocada, nas associações Um-para-Muitos 
+existe apenas uma opção. Por exemplo, se um Foo tem muitos Bars (e, dessa forma, cada Bar pertence a um Foo), então a única implementação sensata é ter uma 
+fooIdcoluna na Bartabela. O oposto é impossível, já que um Foo tem muitos Bars.
+
+Meta
+Neste exemplo, temos os modelos `Team` Teame ` PlayerPlayer`. Queremos informar ao Sequelize que existe uma relação de um-para-muitos entre eles, o que significa 
+que uma equipe tem muitos jogadores, enquanto cada jogador pertence a uma única equipe.
+
+Implementação
+A principal forma de fazer isso é a seguinte:
+
+Team.hasMany(Player);
+Player.belongsTo(Team);
+
+Novamente, como mencionado, a principal maneira de fazer isso usou um par de associações Sequelize ( hasManye belongsTo).
+
+Por exemplo, no PostgreSQL, a configuração acima produzirá o seguinte SQL ao executar o comando sync():
+
+CREATE TABLE IF NOT EXISTS "Teams" (
+  /* ... */
+);
+CREATE TABLE IF NOT EXISTS "Players" (
+  /* ... */
+  "TeamId" INTEGER REFERENCES "Teams" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+  /* ... */
+);
+
+Opções
+As opções a serem aplicadas neste caso são as mesmas do caso Um-para-Um. Por exemplo, para alterar o nome da chave estrangeira e garantir que o relacionamento seja 
+obrigatório, podemos fazer o seguinte:
+
+Team.hasMany(Player, {
+  foreignKey: 'clubId',
+});
+Player.belongsTo(Team);
+
+Assim como nos relacionamentos individuais, ON DELETEo padrão é SET NULLe ON UPDATEo padrão é CASCADE.
+
+Relações muitos-para-muitos
+Filosofia
+As associações Muitos-para-Muitos conectam uma fonte a múltiplos destinos, enquanto todos esses destinos, por sua vez, podem estar conectados a outras fontes além da 
+primeira.
+
+Isso não pode ser representado adicionando uma chave estrangeira a uma das tabelas, como foi feito com os outros relacionamentos. Em vez disso, utiliza-se o conceito
+ de um Modelo de Junção . Este será um modelo extra (e uma tabela extra no banco de dados) que terá duas colunas de chave estrangeira e manterá o controle das 
+ associações. A tabela de junção também é chamada, às vezes, de tabela de junção ou tabela intermediária .
+
+Meta
+Para este exemplo, consideraremos os modelos Moviee Actor. Um ator pode ter participado de muitos filmes, e um filme teve muitos atores envolvidos em sua 
+produção. A tabela de junção que manterá o controle das associações será chamada ActorMovies, que conterá as chaves estrangeiras movieIde actorId.
+
+Implementação
+A principal forma de fazer isso no Sequelize é a seguinte:
+
+const Movie = sequelize.define('Movie', { name: DataTypes.STRING });
+const Actor = sequelize.define('Actor', { name: DataTypes.STRING });
+Movie.belongsToMany(Actor, { through: 'ActorMovies' });
+Actor.belongsToMany(Movie, { through: 'ActorMovies' });
+
+Como uma string foi fornecida na throughopção da belongsToManychamada, o Sequelize criará automaticamente o ActorMoviesmodelo que atuará como modelo de junção. 
+Por exemplo, no PostgreSQL:
+
+CREATE TABLE IF NOT EXISTS "ActorMovies" (
+  "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+  "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+  "MovieId" INTEGER REFERENCES "Movies" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "ActorId" INTEGER REFERENCES "Actors" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  PRIMARY KEY ("MovieId","ActorId")
+);
+
+Em vez de uma string, também é possível passar um modelo diretamente, e nesse caso o modelo fornecido será usado como modelo de junção (e nenhum modelo será 
+criado automaticamente). Por exemplo:
+
+const Movie = sequelize.define('Movie', { name: DataTypes.STRING });
+const Actor = sequelize.define('Actor', { name: DataTypes.STRING });
+const ActorMovies = sequelize.define('ActorMovies', {
+  MovieId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: Movie, // 'Movies' would also work
+      key: 'id',
+    },
+  },
+  ActorId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: Actor, // 'Actors' would also work
+      key: 'id',
+    },
+  },
+});
+Movie.belongsToMany(Actor, { through: ActorMovies });
+Actor.belongsToMany(Movie, { through: ActorMovies });
+
+O código acima gera o seguinte SQL em PostgreSQL, que é equivalente ao mostrado acima:
+
+CREATE TABLE IF NOT EXISTS "ActorMovies" (
+  "MovieId" INTEGER NOT NULL REFERENCES "Movies" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  "ActorId" INTEGER NOT NULL REFERENCES "Actors" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+  "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+  UNIQUE ("MovieId", "ActorId"),     -- Note: Sequelize generated this UNIQUE constraint but
+  PRIMARY KEY ("MovieId","ActorId")  -- it is irrelevant since it's also a PRIMARY KEY
+);
+
+
+Opções
+Diferentemente dos relacionamentos Um-para-Um e Um-para-Muitos, os valores padrão para ambos ON UPDATEsão para relacionamentos Muitos-para-Muitos.ON DELETECASCADE
+
+O atributo `belongs-to-many` cria uma chave única no modelo `through`. O nome dessa chave única pode ser alterado usando a opção `uniqueKey` . Para impedir a 
+criação dessa chave única, use a opção `unique: false` .
+
+Project.belongsToMany(User, {
+  through: UserProjects,
+  uniqueKey: 'my_custom_unique',
+});
+
+OBS: Ainda há muita coisa a ser estudada, por isso não coloquei tudo o que está no site.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
